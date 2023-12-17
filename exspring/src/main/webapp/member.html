@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>회원관리</title>
+    <style>
+        body {
+            text-align: center;
+        }
+        .container {
+            position:fixed; top:10%; left:10%;
+        }
+        form {
+            position:fixed; top:20%; left:60%;
+        }
+       form:not(.active) {
+        display:none;
+       }
+       
+	   #memForm.mod .mod-hide {
+       	display:none;
+       }
+    </style>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+
+      //1.memberList 의 학생정보를 stuTable에 출력
+
+      document.addEventListener("DOMContentLoaded", function () {
+
+        //2.저장버튼을 클릭하면 memForm에 입력한 학생정보를 memberList에 추가
+        let saveButton = document.querySelector("#save");
+        let delButton = document.querySelector("#del");
+        let cancelButton = document.querySelector("#cancel");
+        let addButton = document.querySelector("#add");
+        delButton.disabled = true;
+        let idInput = document.querySelector('[name="memId"]');
+        let passInput = document.querySelector('[name="memPass"]');
+        let nameInput = document.querySelector('[name="memName"]');
+        let pointInput = document.querySelector('[name="memPoint"]');
+        let memForm = document.querySelector("#memForm");
+
+        let tbody = document.querySelector("#memTable > tbody");
+        let rowTemp = document.querySelector("#row");
+
+        //리스트에 추가한 후에 출력하는 함수
+        function refreshList() {
+       	 
+        	fetch('/myapp/api/member/list', {
+    			method:'GET',
+    		}).then(response=> response.json())
+    		.then(function(data) {
+     	    	 tbody.innerHTML = '';
+
+     	          let dfrag = document.createDocumentFragment();
+     	          for (let i = 0; i < data.length; i++) {
+     	            const member = data[i];
+     	            let row = rowTemp.content.cloneNode(true);
+     	            row.querySelector("td.id").innerHTML = member.memId;
+     	            row.querySelector("td.name").innerHTML = member.memName;
+     	            row.querySelector("td.point").innerHTML = member.memPoint;
+     	            row.querySelector(".edit").setAttribute('data-no', member.memId);
+     	            document.querySelector("#del").setAttribute('data-no', member.memId);
+
+     	            dfrag.append(row);
+     	          }
+     	          tbody.append(dfrag);
+
+    		}).catch(function(error) {
+    			console.log(error);
+    		})	
+        	
+         
+          
+        }
+        
+		refreshList();
+   	    initForm();
+        
+       //form 초기화 function
+        function initForm() {
+            idInput.value = nameInput.value = pointInput.value = passInput.value = "";
+            idInput.readOnly = false;
+            memForm.classList.remove('mod');
+            delButton.disabled = true;
+            memForm.classList.remove('active');
+        }
+
+        saveButton.onclick = function () {
+        	let requestUrl = '/myapp/api/member/add';
+        	let message = '명의 회원 저장 성공';
+            if(memForm.classList.contains('mod')) {
+            	requestUrl = '/myapp/api/member/edit';
+            	message = '명의 회원 변경 성공';
+            }
+            	fetch(requestUrl, {
+        			method:'POST',
+        			body: new FormData(memForm)
+        		}).then(response=> response.json())
+        		.then(function(data) {
+        			refreshList();
+            	    initForm();
+            	    alert(data.num + message);
+        		}).catch(function(error) {
+        			alert('회원 변경 실패');
+        		})
+            } 
+      
+        
+
+        //3.변경버튼을 클릭하면, 클릭한 학생 정보를 memForm에 출력
+        //  3-1. memForm의 학생정보를 변경하고 저장버튼을 클릭하면,
+        //      memberList에서 해당 학생정보를 변경
+        document.querySelector('#memTable').onclick = function(ev) {
+            if(ev.target.matches('.edit')) {
+                let no = ev.target.getAttribute('data-no');
+                
+                fetch('/myapp/api/member/edit?memId='+ no, {
+        			method:'GET',
+        		}).then(response=> response.json())
+        		.then(function(data) {
+        			 idInput.value = data.memId;
+                     nameInput.value = data.memName;
+                     pointInput.value = data.memPoint;
+                     idInput.readOnly = true;
+                     memForm.classList.add('mod', 'active');
+                	delButton.disabled = false;
+
+        		}).catch(function(error) {
+        			alert('회원 상세정보 조회 실패');
+        		});
+            }
+      }
+        
+
+        //  3-2. 삭제버튼을 클릭하면, 현재 학생정보를 memberList에서 삭제
+        //* memberList 데이터는 항상 최신 상태를 stuTable에 출력
+        delButton.onclick = function(ev) {
+            if(memForm.classList.contains('mod')) {
+            	let no = ev.target.getAttribute('data-no');
+            	fetch('/myapp/api/member/del?memId='+ no, {
+        			method:'GET',
+        		}).then(response=> response.json())
+        		.then(function(data) {
+        			refreshList();
+            	    initForm();
+            	    alert(data.num + '명의 회원 삭제 성공');
+        		}).catch(function(error) {
+        			alert('회원 삭제 실패');
+        		})
+            	
+            }
+      };
+
+      cancelButton.onclick = function() {
+        initForm();
+      }
+
+      addButton.onclick = function() {
+        memForm.classList.add('active');
+      }
+      
+    });
+ 
+    </script>
+  </head>
+  <body>
+    <div class="container">
+        <button type="button" class="btn btn-outline-warning" id="add">추가</button>
+        <table id="memTable" class="table table-sm table-hover" style="max-width: 500px;">
+        <thead>
+          <tr>
+            <th scope="col">아이디</th>
+            <th scope="col">이름</th>
+            <th scope="col">포인트</th>
+            <th scope="col">처리</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <form id="memForm" action="" style="max-width: 500px;">
+      	<div class="form-group row">
+        	<label class="col-sm-4 col-form-label">아이디</label>
+        	<div class="col-sm-8"> 
+        		<input type="text" name="memId" class="form-control"/><br />
+      		</div>
+      	</div>
+        <div class="mod-hide form-group row">
+        	<label class="col-sm-4 col-form-label">비밀번호</label>
+	        <div class="col-sm-8"> 
+		        <input type="password" name="memPass" class="form-control"/><br />
+      		</div>
+        </div>
+    	<div class="form-group row">
+    		<label class="col-sm-4 col-form-label">이름</label>
+    		<div class="col-sm-8"> 
+		        <input type="text" name="memName" class="form-control"/><br />
+      		</div>
+    	</div>
+    	<div class="form-group row">
+    		<label class="col-sm-4 col-form-label">포인트</label>
+    		<div class="col-sm-8"> 
+		         <input type="number" name="memPoint" class="form-control"/><br />
+      		</div>
+    	</div>
+    		<div>
+	        	<input class="btn btn-sm btn-outline-primary"  type="button"  value="저장" id="save"/>
+	        	<input class="btn btn-sm btn-outline-danger" type="button" value="삭제" id="del" />
+	        	<input class="btn btn-sm btn-outline-info" type="button" value="취소" id="cancel" />
+      		</div>
+      </form>
+      <template id="row">
+        <tr>
+          <td class="id"></td>
+          <td class="name"></td>
+          <td class="point"></td>
+          <td>
+            <button type="button" class="btn btn-sm btn-outline-success edit">변경</button>
+          </td>
+        </tr>
+      </template>
+    </div>
+  </body>
+</html>

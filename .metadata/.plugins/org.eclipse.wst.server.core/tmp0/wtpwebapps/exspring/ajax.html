@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>AJAX TEST</title>
+</head>
+<body>
+	<h3>AJAX TEST</h3>
+	<form action="" id="myform">
+		x: <input type="number" name="x" value="3">
+		y: <input type="number" name="y" value="6">
+		<input type="button" value="전송" id="send">
+		<input type="button" value="전송2" id="send2">
+	</form>
+	<h3 id="result"></h3>
+	<script type="text/javascript">
+		let xInp = document.querySelector('[name="x"]');
+		let yInp = document.querySelector('[name="y"]');
+		let resElm = document. querySelector('#result');
+		let mf = document. querySelector('#myform');
+	
+		document.querySelector('#send').onclick = function() {
+			let xhr = new XMLHttpRequest();
+			xhr.responseType = "json";
+			xhr.onload = function() {
+				console.log("성공");
+				console.log(xhr.status); //응답 상태코드
+				console.log(xhr.getResponseHeader('Content-Type')); //응답 헤더값
+
+				console.log(xhr.response);  //응답 내용을 responseType 설정에 따라 적절히 변환된 결과를 저장
+				let data = xhr.response;
+				resElm.innerHTML = 'sum=' + data.sum + ', mul=' + data.mul;
+				
+			};
+			xhr.onerror = function() {
+				console.log("실패");
+			};
+			xhr.onloadend = function() {
+				console.log("종료");
+			};
+			xhr.open('POST', '/myapp/cal');
+			xhr.setRequestHeader('Accept', 'application/json');
+// 			xhr.send( new URLSearchParams({x : xInp.value,  y: yInp.value}));
+			xhr.send(new FormData(mf));
+		};
+		
+		document.querySelector('#send2').onclick = function() {
+			fetch('/myapp/cal', {
+				method:'POST',
+				body:new FormData(mf),
+			}).then(function(response) {
+				return response.json();
+			}).then(function(data) {
+				resElm.innerHTML = 'sum=' + data.sum + ', mul=' + data.mul;
+			}).catch(function(error) {
+				alert(error);
+			})
+		};
+		
+		
+		
+	</script>
+</body>
+</html>
